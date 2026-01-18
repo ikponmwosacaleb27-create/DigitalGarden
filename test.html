@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Digital Garden</title>
+<style>
+  :root{
+    --bg:#fff; --txt:#222; --link:#0066cc; --border:#e0e0e0;
+    --card-bg:#f9f9f9;
+  }
+  .dark{
+    --bg:#18191a; --txt:#e0e0e0; --link:#4db8ff; --border:#333;
+    --card-bg:#242526;
+  }
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt);line-height:1.6;transition:background .3s,color .3s}
+  a{color:var(--link);text-decoration:none}
+  a:hover{text-decoration:underline}
+  header,#search,#posts,footer{padding:1rem max(2rem,5vw)}
+  header{display:flex;justify-content:space-between;align-items:center}
+  #search input{width:100%;padding:.5rem;border:1px solid var(--border);border-radius:4px}
+  #posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.5rem}
+  .post-card{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:1rem;transition:transform .2s;cursor:pointer}
+  .post-card:hover{transform:translateY(-2px)}
+  .post-title{font-size:1.2rem;margin:0 0 .5rem}
+  .post-excerpt{margin:0;font-size:.9rem;opacity:.85}
+  .post-tags{margin-top:.5rem;font-size:.8rem}
+  .tag{display:inline-block;background:var(--link);color:#fff;padding:0 .4rem;border-radius:3px;margin-right:.3rem}
+  footer{text-align:center;font-size:.9rem;margin-top:2rem}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+  .modal.show{opacity:1;pointer-events:auto}
+  .modal-content{background:var(--card-bg);color:var(--txt);width:min(90%,400px);max-height:80vh;overflow-y:auto;padding:1.5rem;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+  .modal h2{margin-top:0}
+  .modal .close{float:right;font-size:1.5rem;line-height:1;cursor:pointer}
+  #addForm{margin:1rem 0;padding:1rem;border:1px dashed var(--border);border-radius:6px;background:var(--card-bg)}
+  #addForm input,#addForm textarea{display:block;width:100%;margin:.5rem 0;padding:.4rem;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--txt)}
+  #addForm button{margin-top:.5rem;padding:.5rem 1rem;background:var(--link);color:#fff;border:none;border-radius:4px;cursor:pointer}
+</style>
+</head>
+<body class="dark">
+
+<header>
+  <h1>Digital Garden</h1>
+    
+  <button id="themeBtn">🌙</button>
+</header>
+
+    <section id="search">
+  <input type="text" placeholder="Search posts..." id="searchBox">
+</section>
+
+<section id="addForm">
+  <h3>Add a new post</h3>
+  <input type="text" id="newTitle" placeholder="Title">
+  <textarea id="newExcerpt" rows="2" placeholder="Excerpt"></textarea>
+  <textarea id="newBody" rows="4" placeholder="Full content"></textarea>
+  <input type="text" id="newTags" placeholder="Tags (comma separated)">
+  <button id="saveBtn">Save</button>
+</section>
+
+<section id="posts">
+  <!-- cards injected here -->
+</section>
+
+<footer>
+  © <span id="year"></span> My Digital Garden
+</footer>
+
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+const POSTS = [
+  {title:"First Thought",excerpt:"Just getting started with my digital garden. Stay tuned!",tags:["intro","garden"],date:"2025-01-01",body:"This is the full content of the first post."},
+  {title:"Learning JavaScript",excerpt:"A quick note on closures and why they matter.",tags:["js","programming"],date:"2025-01-05",body:"Closures are functions that capture the lexical environment they were defined in."},
+  {title:"Minimalist Design",excerpt:"Why less is more when it comes to web UI.",tags:["design","ui"],date:"2025-01-10",body:"A minimalist design focuses on content and usability."}
+];
+
+function renderPosts(filter = "") {
+  const container = document.getElementById("posts");
+  container.innerHTML = "";
+
+  const filtered = POSTS.filter(p =>
+    p.title.toLowerCase().includes(filter) ||
+    p.excerpt.toLowerCase().includes(filter) ||
+    p.tags.some(t => t.toLowerCase().includes(filter))
+  );
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<p style="grid-column:1/-1;">No posts found.</p>`;
+    return;
+  }
+
+  filtered.forEach(p => {
+    const tags = p.tags.map(t => `<span class="tag">${t}</span>`).join("");
+    const card = `
+      <div class="post-card" data-id="${p.title}">
+        <h2 class="post-title">${p.title}</h2>
+        <p class="post-excerpt">${p.excerpt}</p>
+        <div class="post-tags">${tags}</div>
+      </div>`;
+    container.insertAdjacentHTML("beforeend", card);
+  });
+
+  document.querySelectorAll(".post-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const post = POSTS.find(p => p.title === card.dataset.id);
+      if (post) showModal(post);
+    });
+  });
+}
+
+function showModal(post) {
+  const body = document.getElementById("modalBody");
+  const tags = post.tags.map(t => `<span class="tag">${t}</span>`).join("");
+  body.innerHTML = `<h2>${post.title}</h2><p>${post.body}</p><div class="post-tags">${tags}</div>`;
+  document.getElementById("modal").classList.add("show");
+}
+
+document.getElementById("searchBox").addEventListener("input", e => renderPosts(e.target.value.toLowerCase()));
+
+document.getElementById("themeBtn").addEventListener("click", () => {
+  document.body.classList.toggle("dark");
+  document.getElementById("themeBtn").textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+});
+
+document.getElementById("year").textContent = new Date().getFullYear();
+
+document.querySelector(".close").addEventListener("click", () => document.getElementById("modal").classList.remove("show"));
+document.getElementById("modal").addEventListener("click", e => {if (e.target === document.getElementById("modal")) document.getElementById("modal").classList.remove("show");});
+
+document.getElementById("saveBtn").addEventListener("click", () => {
+  const title = document.getElementById("newTitle").value.trim();
+  const excerpt = document.getElementById("newExcerpt").value.trim();
+  const body = document.getElementById("newBody").value.trim();
+  const tags = document.getElementById("newTags").value.trim().split(",").map(t => t.trim()).filter(Boolean);
+  if (!title || !excerpt || !body) {
+    alert("Please fill title, excerpt and body.");
+    return;
+  }
+  POSTS.unshift({title,excerpt,tags,body,date:new Date().toISOString().split("T")[0]});
+  renderPosts();
+  document.getElementById("newTitle").value = "";
+  document.getElementById("newExcerpt").value = "";
+  document.getElementById("newBody").value = "";
+  document.getElementById("newTags").value = "";
+});
+
+renderPosts();
+</script>
+</body>
+</html>
